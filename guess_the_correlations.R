@@ -2,6 +2,7 @@ library(torch)
 library(luz)
 library(torchvision)
 library(torchdatasets)
+library(purrr)
 
 train_ind <- 1:1e4
 valid_ind <- 10001:1.5e4
@@ -35,7 +36,7 @@ valid_ds <- guess_the_correlation_dataset(
   transform = function(img){
     crop_axes(img) %>% add_channel_dim()
   },
-  indexes = val_ind,
+  indexes = valid_ind,
   download = FALSE
 )
 
@@ -49,7 +50,7 @@ test_ds <- guess_the_correlation_dataset(
 )
 
 length(train_ds) == length(train_ind)
-length(valid_ds) == length(val_ind)
+length(valid_ds) == length(valid_ind)
 length(test_ds) == length(test_ind)
 
 train_dl <- dataloader(train_ds, batch_size = 64, shuffle = TRUE)
@@ -127,11 +128,13 @@ fitted <- net %>%
   ) %>%
   fit(train_dl, epochs = 10, valid_data = test_dl)
 
-preds <- predict(fitted, test_dl)
+preds <- predict(fitted, test_dl) %>% as.numeric()
 
 test_dl <- dataloader(test_ds, batch_size = 5e3)
 
-targets <- (test_dl %>% dataloader_make_iter() %>% dataloader_next())$y %>% as.numeric()
+targets <- ((test_dl %>% dataloader_make_iter() %>% dataloader_next())$y) %>% as.numeric()
+
+df <- data.frame(targets = targets, preds = preds)
 
 library(ggplot2)
 
